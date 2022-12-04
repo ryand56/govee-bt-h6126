@@ -5,11 +5,7 @@ import { Color, xorClr, EMPTY_COLOR } from "./Color";
 
 const CONTROL_PACKET_ID = 0x33;
 
-interface StripProps {
-    uuid: string
-    name: string
-    model: StripType
-    writeChar: Characteristic
+interface StripState {
     color: Color
     isWhite: boolean
     brightness: number
@@ -30,16 +26,23 @@ const checksumMessage = (options: ChecksumMessageOptions) => {
 };
 
 class Strip {
-    /** @internal */
-    state: StripProps;
+    uuid: string;
+    name: string;
+    model: StripType;
+    writeChar: Characteristic;
+    state: StripState;
 
-    constructor(init: StripProps) {
-        this.state = init;
+    constructor(uuid: string, name: string, model: StripType, writeChar: Characteristic, state: StripState) {
+        this.uuid = uuid;
+        this.name = name;
+        this.model = model;
+        this.writeChar = writeChar;
+        this.state = state;
     }
 
     /** @internal Sends a message over BLE */
     public async sendHex(message: string) {
-        await this.state.writeChar.writeAsync(Buffer.from(message, "hex"), false);
+        await this.writeChar.writeAsync(Buffer.from(message, "hex"), false);
     }
 
     public setBrightness(value: number) {
