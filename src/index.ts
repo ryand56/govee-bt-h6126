@@ -1,4 +1,4 @@
-import { TypedEmitter } from "tiny-typed-emitter";
+import { EventEmitter } from "events";
 import noble from "@abandonware/noble";
 import { Strip, StripType } from "./models";
 import { isValid } from "./validation";
@@ -7,12 +7,12 @@ process.env.NOBLE_REPORT_ALL_HCI_EVENTS = "1";
 
 const WRITE_CHAR_UUID = "000102030405060708090a0b0c0d2b11";
 
-interface StripEvents {
-    deviceFound: (p: noble.Peripheral) => void;
-    stripFound: (strip: Strip) => void;
+export declare interface StripControl {
+    on(event: "deviceFound", listener: (p: noble.Peripheral) => void): this;
+    on(event: "stripFound", listener: (strip: Strip) => void): this;
 }
 
-export class StripControl extends TypedEmitter<StripEvents> {
+export class StripControl extends EventEmitter {
     private cache: {
         [uuid: string]: Strip
     } = {};
