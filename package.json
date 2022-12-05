@@ -1,6 +1,6 @@
 {
   "name": "govee-bt-control",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Node module used to control Govee H6126 lightstrips.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
