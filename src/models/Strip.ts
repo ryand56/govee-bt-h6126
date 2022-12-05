@@ -17,22 +17,27 @@ interface StripState {
 interface ChecksumMessageOptions {
     type: MessageType
     specialByte: number
+    flag1: number
     rgbColor: Color
-    flag: number
+    flag2: number
     whiteColor: Color
+    seg: number
 }
 
 const checksumMessage = (options: ChecksumMessageOptions) => {
     const checksum = 
-        CONTROL_PACKET_ID ^ options.type ^ options.specialByte ^ xorClr(options.rgbColor) ^ options.flag ^ xorClr(options.whiteColor);
+        CONTROL_PACKET_ID ^ options.type ^ options.specialByte ^ options.flag1 ^ xorClr(options.rgbColor) ^ options.flag2 ^ xorClr(options.whiteColor) ^ options.seg;
     
     return hexify(CONTROL_PACKET_ID)
         + hexify(options.type)
         + hexify(options.specialByte)
+        + hexify(options.flag1)
         + clrToHex(options.rgbColor)
-        + hexify(options.flag)
+        + hexify(options.flag2)
         + clrToHex(options.whiteColor)
-        + "000000000000000000"
+        + "00"
+        + hexify(options.seg)
+        + "0000000000"
         + hexify(checksum);
 };
 
@@ -75,9 +80,11 @@ class Strip {
         const message = checksumMessage({
             type: MessageType.BRIGHTNESS,
             specialByte: value,
+            flag1: 0x0,
             rgbColor: EMPTY_COLOR,
-            flag: 0x0,
-            whiteColor: EMPTY_COLOR
+            flag2: 0x0,
+            whiteColor: EMPTY_COLOR,
+            seg: 0x0
         });
 
         await this.sendHex(message);
@@ -94,9 +101,11 @@ class Strip {
         const message = checksumMessage({
             type: MessageType.POWER,
             specialByte: flag,
+            flag1: 0x0,
             rgbColor: EMPTY_COLOR,
-            flag: 0x0,
-            whiteColor: EMPTY_COLOR
+            flag2: 0x0,
+            whiteColor: EMPTY_COLOR,
+            seg: 0x0
         });
 
         await this.sendHex(message);
@@ -112,10 +121,12 @@ class Strip {
     public async setColor(value: Color, isWhite: boolean) {
         const message = checksumMessage({
             type: MessageType.COLOR,
-            specialByte: 0x2,
+            specialByte: 0x15,
+            flag1: 0x1,
             rgbColor: isWhite ? EMPTY_COLOR : value,
-            flag: isWhite ? 0x1 : 0x0,
-            whiteColor: isWhite ? value : EMPTY_COLOR
+            flag2: isWhite ? 0x1 : 0x0,
+            whiteColor: isWhite ? value : EMPTY_COLOR,
+            seg: 0xff7f
         });
         
         await this.sendHex(message);

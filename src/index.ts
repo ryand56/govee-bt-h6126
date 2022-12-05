@@ -66,16 +66,16 @@ export class StripControl extends EventEmitter {
     }
 
     public async startDiscovery() {
-        noble.on("discover", this._onDiscover);
-        noble.on("scanStart", this._onScanStart);
-        noble.on("scanStop", this._onScanStop);
+        noble.on("discover", this._onDiscover.bind(this));
+        noble.on("scanStart", this._onScanStart.bind(this));
+        noble.on("scanStop", this._onScanStop.bind(this));
         await noble.startScanningAsync([], false);
     }
 
     public async stopDiscovery() {
         await noble.stopScanningAsync();
-        noble.removeListener("discover", this._onDiscover);
-        noble.removeListener("scanStart", this._onScanStart);
-        noble.removeListener("scanStop", this._onScanStop);
+        noble.removeListener("discover", this._onDiscover.bind(this));
+        noble.removeListener("scanStart", this._onScanStart.bind(this));
+        noble.removeListener("scanStop", this._onScanStop.bind(this));
     }
 };
