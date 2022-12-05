@@ -1,54 +1,72 @@
-import { EventEmitter } from "events";
+import { TypedEmitter } from "tiny-typed-emitter";
 import noble from "@abandonware/noble";
 import { Strip, StripType } from "./models";
 import { isValid } from "./validation";
 
 process.env.NOBLE_REPORT_ALL_HCI_EVENTS = "1";
 
-const stripCache: {
-    [uuid: string]: Strip
-} = {};
-
 const WRITE_CHAR_UUID = "000102030405060708090a0b0c0d2b11";
 
-noble.on("discover", async peripheral => {
-    const { uuid, address, advertisement } = peripheral;
-    console.log(advertisement.localName, address);
+interface StripEvents {
+    deviceFound: (p: noble.Peripheral) => void;
+    stripFound: (strip: Strip) => void;
+}
+
+export class StripControl extends TypedEmitter<StripEvents> {
+    private cache: {
+        [uuid: string]: Strip
+    } = {};
+
+    private async _onDiscover(peripheral: noble.Peripheral) {
+        const { uuid, address, advertisement } = peripheral;
+        console.log(advertisement.localName, address);
+        
+        const model = isValid(peripheral);
+        if (model === StripType.UNKNOWN) return;
+        if (this.cache[uuid]) return;
     
-    const model = isValid(peripheral);
-    if (model === StripType.UNKNOWN) return;
-    if (stripCache[uuid]) return;
+        await peripheral.connectAsync();
+        const chars = await peripheral.discoverSomeServicesAndCharacteristicsAsync([], [
+            WRITE_CHAR_UUID
+        ]);
+        if (!chars.characteristics) return;
+        const writeChar = chars.characteristics[0];
+    
+        // Create the lightstrip
+        const strip = new Strip(uuid, advertisement.localName, model, writeChar);
+        this.cache[strip.uuid] = strip;
+    
+        const interval = setInterval(() => strip.keepAlive(), 2000);
+        peripheral.on("disconnect", () => {
+            clearInterval(interval);
+            delete this.cache[strip.uuid];
+        });
+        peripheral.on("connect", () => { this.emit("stripFound", strip) });
+    };
 
-    await peripheral.connectAsync();
-    const chars = await peripheral.discoverSomeServicesAndCharacteristicsAsync([], [
-        WRITE_CHAR_UUID
-    ]);
-    if (!chars.characteristics) return;
-    const writeChar = chars.characteristics[0];
+    private _onScanStart() {
+        console.log("Scan started");
+    };
 
-    // Create the lightstrip
-    const strip = new Strip(uuid, advertisement.localName, model, writeChar);
-    stripCache[strip.uuid] = strip;
+    private _onScanStop() {
+        console.log("Scan stopped");
+    }
 
-    const interval = setInterval(() => strip.keepAlive(), 2000);
-    peripheral.on("disconnect", () => {
-        clearInterval(interval);
-        delete stripCache[strip.uuid];
-    });
-});
+    constructor() {
+        super();
+    }
 
-noble.on("scanStart", () => {
-    console.log("Scan started");
-});
+    public async startDiscovery() {
+        noble.on("discover", this._onDiscover);
+        noble.on("scanStart", this._onScanStart);
+        noble.on("scanStop", this._onScanStop);
+        await noble.startScanningAsync([], false);
+    }
 
-noble.on("scanStop", () => {
-    console.log("Scan stopped");
-});
-
-export const startDiscovery = async () => {
-    await noble.startScanningAsync([], false);
-};
-
-export const stopDiscovery = async () => {
-    await noble.stopScanningAsync();
+    public async stopDiscovery() {
+        await noble.stopScanningAsync();
+        noble.removeListener("discover", this._onDiscover);
+        noble.removeListener("scanStart", this._onScanStart);
+        noble.removeListener("scanStop", this._onScanStop);
+    }
 };
