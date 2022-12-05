@@ -31,7 +31,10 @@ noble.on("discover", async peripheral => {
     stripCache[strip.uuid] = strip;
 
     const interval = setInterval(() => strip.keepAlive(), 2000);
-    peripheral.on("disconnect", () => clearInterval(interval));
+    peripheral.on("disconnect", () => {
+        clearInterval(interval);
+        delete stripCache[strip.uuid];
+    });
 });
 
 noble.on("scanStart", () => {
