@@ -26,4 +26,5 @@ export const hexToClr = (s: string): Color => {
     return { r, g, b };
 };
 
-export const EMPTY_COLOR: Color = { r: 0xFF, g: 0xFF, b: 0xFF };
+export const EMPTY_COLOR: Color = { r: 0, g: 0, b: 0 };
+export const INIT_COLOR: Color = { r: 0xFF, g: 0xFF, b: 0xFF };
