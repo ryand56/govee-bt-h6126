@@ -8,8 +8,17 @@ process.env.NOBLE_REPORT_ALL_HCI_EVENTS = "1";
 const WRITE_CHAR_UUID = "000102030405060708090a0b0c0d2b11";
 
 export declare interface StripControl {
+    // Permanent listeners
     on(event: "deviceFound", listener: (p: noble.Peripheral) => void): this;
     on(event: "stripFound", listener: (strip: Strip) => void): this;
+
+    // Temporary (only once) listeners
+    once(event: "deviceFound", listener: (p: noble.Peripheral) => void): this;
+    once(event: "stripFound", listener: (strip: Strip) => void): this;
+
+    // Remove listeners
+    removeListener(event: "deviceFound", listener: (p: noble.Peripheral) => void): this;
+    removeListener(event: "stripFound", listener: (strip: Strip) => void): this;
 }
 
 export class StripControl extends EventEmitter {
