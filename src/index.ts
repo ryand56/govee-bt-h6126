@@ -27,8 +27,8 @@ export class StripControl extends EventEmitter {
     } = {};
 
     private async _onDiscover(peripheral: noble.Peripheral) {
-        const { uuid, address, advertisement } = peripheral;
-        console.log(advertisement.localName, address);
+        const { uuid, advertisement } = peripheral;
+        this.emit("deviceFound", peripheral);
         
         const model = isValid(peripheral);
         if (model === StripType.UNKNOWN) return;
