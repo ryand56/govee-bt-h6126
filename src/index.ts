@@ -44,13 +44,14 @@ export class StripControl extends EventEmitter {
         // Create the lightstrip
         const strip = new Strip(uuid, advertisement.localName, model, writeChar);
         this.cache[strip.uuid] = strip;
+
+        this.emit("stripFound", strip);
     
         const interval = setInterval(() => strip.keepAlive(), 2000);
         peripheral.on("disconnect", () => {
             clearInterval(interval);
             delete this.cache[strip.uuid];
         });
-        peripheral.on("connect", () => { this.emit("stripFound", strip) });
     };
 
     private _onScanStart() {
