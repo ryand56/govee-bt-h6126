@@ -21,24 +21,40 @@ interface ChecksumMessageOptions {
     rgbColor: Color
     flag2: number
     whiteColor: Color
-    seg: number
 }
 
+// https://github.com/ib0b/RGB-PC/blob/master/src/models/Strip.js#L158
+const getChecksum = (bytes: string) => {
+    const numChunks = bytes.length / 2;
+    let xor = "00";
+    for (let i = 0; i < numChunks; i++) {
+        const chunk = bytes.slice(i * 2, (i + 1) * 2);
+
+        const buf1 = Buffer.from(xor, "hex");
+        const buf2 = Buffer.from(chunk, "hex");
+        const bufResult = buf1.map((b, i) => b ^ buf2[i]);
+        xor = Buffer.from(bufResult).toString("hex");
+    }
+
+    return xor;
+};
+
 const checksumMessage = (options: ChecksumMessageOptions) => {
-    const checksum = 
-        CONTROL_PACKET_ID ^ options.type ^ options.specialByte ^ options.flag1 ^ xorClr(options.rgbColor) ^ options.flag2 ^ xorClr(options.whiteColor) ^ options.seg;
+    //const checksum = 
+        //CONTROL_PACKET_ID ^ options.type ^ options.specialByte ^ options.flag1 ^ xorClr(options.rgbColor) ^ options.flag2 ^ xorClr(options.whiteColor) ^ options.seg;
     
-    return hexify(CONTROL_PACKET_ID)
+    let message = hexify(CONTROL_PACKET_ID)
         + hexify(options.type)
         + hexify(options.specialByte)
         + hexify(options.flag1)
         + clrToHex(options.rgbColor)
         + hexify(options.flag2)
         + clrToHex(options.whiteColor)
-        + "00"
-        + hexify(options.seg)
-        + "0000000000"
-        + hexify(checksum);
+        + "0000000000000000";
+        //+ hexify(checksum);
+    
+    message += getChecksum(message);
+    return message;
 };
 
 class Strip {
@@ -83,8 +99,7 @@ class Strip {
             flag1: 0x0,
             rgbColor: EMPTY_COLOR,
             flag2: 0x0,
-            whiteColor: EMPTY_COLOR,
-            seg: 0x0
+            whiteColor: EMPTY_COLOR
         });
 
         await this.sendHex(message);
@@ -97,16 +112,21 @@ class Strip {
      * @returns A promise that is resolved when the power has been sent.
      */
     public async setPower(value: boolean) {
-        const flag = value ? 1 : 0;
-        const message = checksumMessage({
-            type: MessageType.POWER,
-            specialByte: flag,
-            flag1: 0x0,
-            rgbColor: EMPTY_COLOR,
-            flag2: 0x0,
-            whiteColor: EMPTY_COLOR,
-            seg: 0x0
-        });
+        /* 
+            const flag = value ? 1 : 0;
+            const message = checksumMessage({
+                type: MessageType.POWER,
+                specialByte: flag,
+                flag1: 0x0,
+                rgbColor: EMPTY_COLOR,
+                flag2: 0x0,
+                whiteColor: EMPTY_COLOR,
+                seg: 0x0
+            });
+        */
+        const message = value
+            ? "3301010000000000000000000000000000000033"
+            : "3301000000000000000000000000000000000032";
 
         await this.sendHex(message);
         this.state.power = value;
@@ -119,7 +139,7 @@ class Strip {
      * @returns A promise that is resolved when the color has been sent.
      */
     public async setColor(value: Color, isWhite: boolean) {
-        const message = checksumMessage({
+        /* const message = checksumMessage({
             type: MessageType.COLOR,
             specialByte: 0x15,
             flag1: 0x1,
@@ -127,7 +147,13 @@ class Strip {
             flag2: isWhite ? 0x1 : 0x0,
             whiteColor: isWhite ? value : EMPTY_COLOR,
             seg: 0xff7f
-        });
+        }); */
+        const rgbColor = isWhite ? EMPTY_COLOR : value;
+        const flag2 = isWhite ? 0x1 : 0x0;
+        const whiteColor = isWhite ? value : EMPTY_COLOR;
+        let message = `33051501${clrToHex(rgbColor)}${hexify(flag2)}${clrToHex(whiteColor)}00ff7f0000000000`;
+        message += getChecksum(message);
+        console.log(message);
         
         await this.sendHex(message);
         this.state.color = value;
@@ -139,6 +165,6 @@ class Strip {
     public async keepAlive() {
         await this.sendHex(KEEP_ALIVE_PACKET);
     }
-}
+};
 
 export default Strip;
