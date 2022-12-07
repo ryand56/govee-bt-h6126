@@ -153,7 +153,6 @@ class Strip {
         const whiteColor = isWhite ? value : EMPTY_COLOR;
         let message = `33051501${clrToHex(rgbColor)}${hexify(flag2)}${clrToHex(whiteColor)}00ff7f0000000000`;
         message += getChecksum(message);
-        console.log(message);
         
         await this.sendHex(message);
         this.state.color = value;
